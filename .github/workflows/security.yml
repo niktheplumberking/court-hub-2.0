@@ -1,0 +1,50 @@
+name: Security Review
+
+# Court Hub — automated AI security review on every pull request.
+# Engine: anthropics/claude-code-security-review (same engine as the /security-review
+# command you run locally in Claude Code).
+#
+# Requirements:
+#   1. A GitHub repo secret named CLAUDE_API_KEY (your own Anthropic API key,
+#      enabled for BOTH "Claude API" and "Claude Code" in the Anthropic Console).
+#   2. This file lives at: .github/workflows/security.yml
+#
+# Behaviour: scans only the files CHANGED in each PR (diff-aware) and posts
+# findings as inline PR comments with severity + a suggested fix.
+
+permissions:
+  pull-requests: write   # needed to leave review comments on the PR
+  contents: read
+
+on:
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+
+      - uses: anthropics/claude-code-security-review@main
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
+
+          # ---- Optional tuning (uncomment / edit as needed) ----
+
+          # Use the newest, strongest model for deeper analysis.
+          # Default is an older pinned Opus (claude-opus-4-1-20250805).
+          # claude-model: claude-opus-4-8
+
+          # Don't waste tokens scanning generated assets / frame images.
+          # exclude-directories: public/frames,public/construct,node_modules,.next
+
+          # Give the reviewer Court Hub-specific things to look hard at.
+          # (Create the file first — see the workplan doc, Part 6.)
+          # custom-security-scan-instructions: .github/security/courthub-scan-instructions.txt
+
+          # Raise if scans time out on larger diffs (minutes).
+          # claudecode-timeout: 30
